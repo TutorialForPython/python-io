@@ -69,7 +69,7 @@ class UserIndexAPI(HTTPMethodView):
             return jsonify({
                 "msg": "参数错误",
                 "error": str(e)
-            }, ensure_ascii=False), 401
+            }, ensure_ascii=False, status=401)
         else:
             uid = User.append(insert)
             return jsonify({
@@ -86,19 +86,19 @@ class UserAPI(HTTPMethodView):
         except IndexError as dn:
             return jsonify({
                 "msg": "未找到用户",
-            }, ensure_ascii=False), 401
+            }, ensure_ascii=False, status=401)
 
         except Exception as e:
             return jsonify({
                 "msg": "执行错误",
-            }, ensure_ascii=False), 500
+            }, ensure_ascii=False, status=500)
         else:
             if u:
                 return jsonify(u, ensure_ascii=False)
             else:
                 return jsonify({
                     "msg": "未找到用户",
-                }, ensure_ascii=False), 401
+                }, ensure_ascii=False, status=401)
 
     async def put(self, request, uid):
         try:
@@ -106,12 +106,12 @@ class UserAPI(HTTPMethodView):
         except IndexError as dn:
             return jsonify({
                 "msg": "未找到用户",
-            }, ensure_ascii=False), 401
+            }, ensure_ascii=False, status=401)
 
         except Exception as e:
             return jsonify({
                 "msg": "执行错误",
-            }, ensure_ascii=False), 500
+            }, ensure_ascii=False, status=500)
         else:
             if u:
                 insert = request.json
@@ -122,7 +122,7 @@ class UserAPI(HTTPMethodView):
             else:
                 return jsonify({
                     "msg": "未找到用户",
-                }, ensure_ascii=False), 401
+                }, ensure_ascii=False, status=401)
 
     async def delete(self, request, uid):
         try:
@@ -130,12 +130,12 @@ class UserAPI(HTTPMethodView):
         except IndexError as dn:
             return jsonify({
                 "msg": "未找到用户",
-            }, ensure_ascii=False), 401
+            }, ensure_ascii=False, status=401)
 
         except Exception as e:
             return jsonify({
                 "msg": "执行错误",
-            }, ensure_ascii=False), 500
+            }, ensure_ascii=False, status=500)
         else:
             if u:
                 User[uid] = None
@@ -145,7 +145,7 @@ class UserAPI(HTTPMethodView):
             else:
                 return jsonify({
                     "msg": "未找到用户",
-                }, ensure_ascii=False), 401
+                }, ensure_ascii=False, status=401)
 
 
 user_index_view = UserIndexAPI.as_view()
@@ -153,7 +153,7 @@ user_view = UserAPI.as_view()
 
 
 app.add_route(user_index_view, '/user')
-app.add_route(user_view, '/user/<int:uid>')
+app.add_route(user_view, '/user/<uid:int>')
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000)

@@ -1,6 +1,19 @@
 from flask import Flask, Blueprint, jsonify, request, after_this_request
 from flask.views import MethodView
 from jsonschema import validate
+from functools import wraps
+import time
+
+def print_time(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        start = time.time()
+        response = f(*args, **kwargs)
+        end = time.time()
+        spend = end-start
+        print(f"spend {spend} s")
+        return response
+    return decorated_function
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 api_v1 = Blueprint('v1', __name__)
@@ -29,7 +42,7 @@ User_Schema = {
 
 
 class UserIndexAPI(MethodView):
-
+    decorators = [print_time]
     def get(self):
         @after_this_request
         def _after_this_request(response):

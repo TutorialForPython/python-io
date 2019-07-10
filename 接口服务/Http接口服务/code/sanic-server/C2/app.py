@@ -1,9 +1,11 @@
 from sanic import Sanic
+from sanic import Blueprint
 from sanic.views import HTTPMethodView
 from sanic.response import json as jsonify
 from jsonschema import validate
 
 app = Sanic()
+api_v1 = Blueprint('my_blueprint')
 
 User = []
 
@@ -152,8 +154,10 @@ user_index_view = UserIndexAPI.as_view()
 user_view = UserAPI.as_view()
 
 
-app.add_route(user_index_view, '/user')
-app.add_route(user_view, '/user/<uid:int>')
+api_v1.add_route(user_index_view, '/user')
+api_v1.add_route(user_view, '/user/<int:uid>')
+
+app.blueprint(api_v1, url_prefix='/v1')
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000)

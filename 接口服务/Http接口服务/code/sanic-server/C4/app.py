@@ -1,9 +1,25 @@
 from sanic import Sanic
+from sanic import Blueprint
 from sanic.views import HTTPMethodView
 from sanic.response import json as jsonify
 from jsonschema import validate
 
+from functools import wraps
+import time
+
+def print_time(f):
+    @wraps(f)
+    async def decorated_function(request, *args, **kwargs):
+        start = time.time()
+        response = await f(request, *args, **kwargs)
+        end = time.time()
+        spend = end-start
+        print(f"spend {spend} s")
+        return response
+    return decorated_function
+
 app = Sanic()
+api_user = Blueprint('api_user')
 
 User = []
 
@@ -28,7 +44,7 @@ User_Schema = {
 
 
 class UserIndexAPI(HTTPMethodView):
-
+    @print_time
     async def get(self, request):
         count = len(User)
         result = {
@@ -151,9 +167,122 @@ class UserAPI(HTTPMethodView):
 user_index_view = UserIndexAPI.as_view()
 user_view = UserAPI.as_view()
 
+api_user.add_route(user_index_view, '/user')
+api_user.add_route(user_view, '/user/<uid:int>')
 
-app.add_route(user_index_view, '/user')
-app.add_route(user_view, '/user/<uid:int>')
+
+api_todo = Blueprint('api_todo')
+
+Todo = {}
+
+Todo_Schema = {
+    "title": "Todo",
+    "description": "工作列表",
+    "type": "object",
+    "properties": {
+        "msg": {
+            "description": "message",
+            "type": "string"
+        }, "dead_line": {
+            "description": "dead line",
+            "type": "str"
+        }
+    },
+    "required": ["msg"]
+}
+
+
+class TodoAPI(HTTPMethodView):
+    decorators = [print_time]
+    async def get(self, request, uid):
+        try:
+            u = User[uid]
+        except IndexError as dn:
+            return jsonify({
+                "msg": "未找到用户",
+            }, ensure_ascii=False, status=401)
+
+        except Exception as e:
+            return jsonify({
+                "msg": "执行错误",
+            }, ensure_ascii=False, status=500)
+        else:
+            if u:
+                if Todo.get(uid):
+                    return jsonify({"uid": uid, "todo": Todo.get(uid)}, ensure_ascii=False)
+                else:
+                    return jsonify({
+                        "msg": "未找到用户的todo列表",
+                    }, ensure_ascii=False, status=404)
+            else:
+                return jsonify({
+                    "msg": "未找到用户",
+                }, ensure_ascii=False, status=401)
+
+    async def post(self, request, uid):
+        try:
+            u = User[uid]
+        except IndexError as dn:
+            return jsonify({
+                "msg": "未找到用户",
+            }, ensure_ascii=False, status=401)
+
+        except Exception as e:
+            return jsonify({
+                "msg": "执行错误",
+            }, ensure_ascii=False, status=500)
+        else:
+            if u:
+                insert = request.json
+                try:
+                    validate(instance=insert, schema=Todo_Schema)
+                except Exception as e:
+                    return jsonify({
+                        "msg": "参数错误",
+                        "error": str(e)
+                    }, ensure_ascii=False, status=401)
+                else:
+                    Todo.get(uid).append(insert)
+                    return jsonify({
+                        "msg": "插入成功"
+                    }, ensure_ascii=False)
+            else:
+                return jsonify({
+                    "msg": "未找到用户",
+                }, ensure_ascii=False, status=401)
+
+
+todo_view = TodoAPI.as_view()
+api_todo.add_route(todo_view, '/todo/<uid:int>')
+
+api_v1 = Blueprint.group(api_user, api_todo)
+
+app.blueprint(api_v1, url_prefix='/v1')
+
+@app.listener("before_server_start")
+async def _before_server_start(app,loop):
+    print("before_server_start")
+
+@app.listener("after_server_start")
+async def _after_server_start(app,loop):
+    print("after_server_start")
+
+@app.listener("before_server_stop")
+async def _before_server_stop(app,loop):
+    print("before_server_stop")
+
+@app.listener("after_server_stop")
+async def _after_server_stop(app,loop):
+    print("after_server_stop")
+
+@app.middleware('request')
+async def print_on_request(request):
+	print("I print when a request is received by the server")
+
+@app.middleware('response')
+async def print_on_response(request, response):
+	print("I print when a response is returned by the server")
+
 
 if __name__ == "__main__":
     app.run(host='localhost', port=5000)
